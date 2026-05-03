@@ -1,0 +1,8 @@
+# Dependências adicionais para o endpoint /predict/melanoma
+# Adicionar ao requirements.txt do repositório Fiap_Pos_9AIDT_Fase_01_API
+
+torch>=2.1.0
+torchvision>=0.16.0
+timm>=0.9.0
+albumentations>=1.3.0
+Pillow>=10.0.0
