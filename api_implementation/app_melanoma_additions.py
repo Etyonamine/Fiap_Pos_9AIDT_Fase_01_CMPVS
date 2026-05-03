@@ -94,6 +94,10 @@ def predict_melanoma_endpoint():
     try:
         tta_steps = int(request.form.get("tta_steps", 5))
         tta_steps = max(1, min(10, tta_steps))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Valor inválido para 'tta_steps': deve ser um inteiro entre 1 e 10."}), 400
+
+    try:
         image_bytes = file.read()
         result = run_predict_melanoma(image_bytes, melanoma_model, tta_steps)
     except Exception as exc:

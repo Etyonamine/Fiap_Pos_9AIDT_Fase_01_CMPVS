@@ -9,6 +9,7 @@ from PIL import Image
 
 IMG_SIZE = 380
 TTA_STEPS = 5
+CLASSIFICATION_THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -99,18 +100,18 @@ def predict_melanoma(
     """
     image = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGB"))
 
-    all_probs = 0.0
+    prob_sum = 0.0
     for t in range(tta_steps):
         transform = _get_tta_transform() if t > 0 else _get_val_transform()
         tensor = transform(image=image)["image"].unsqueeze(0).to(DEVICE)
         logit = model(tensor)
         prob = torch.sigmoid(logit).item()
-        all_probs += prob
+        prob_sum += prob
 
-    prob = all_probs / tta_steps
-    label = int(prob >= 0.5)
+    prob = prob_sum / tta_steps
+    label = int(prob >= CLASSIFICATION_THRESHOLD)
     return {
         "probabilidade_melanoma": round(prob, 4),
         "classificacao": "maligno" if label else "benigno",
-        "alerta": bool(prob >= 0.5),
+        "alerta": bool(prob >= CLASSIFICATION_THRESHOLD),
     }

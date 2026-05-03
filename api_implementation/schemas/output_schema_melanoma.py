@@ -17,4 +17,5 @@ output_schema_melanoma = {
             "description": "true se probabilidade ≥ 0.5",
         },
     },
+    "required": ["probabilidade_melanoma", "classificacao", "alerta"],
 }
