@@ -21,9 +21,10 @@ Passos executados
 
 Uso
 ---
+    # A partir da raiz do projeto ou de qualquer diretório:
     python data/prepare_dataset.py
 
-    # Parâmetros opcionais
+    # Parâmetros opcionais (caminhos relativos ou absolutos)
     python data/prepare_dataset.py --data-dir data --images-dir data/isic2020 --seed 42
 """
 
@@ -122,15 +123,16 @@ def clean_image_folder(folder: Path, selected_names: set, dry_run: bool = False)
 
 def main():
     parser = argparse.ArgumentParser(description="Prepara subconjuntos balanceados do ISIC 2020.")
+    _script_dir = Path(__file__).parent
     parser.add_argument(
         "--data-dir",
-        default="data",
-        help="Pasta onde estão os CSVs (padrão: data)",
+        default=str(_script_dir),
+        help="Pasta onde estão os CSVs (padrão: diretório do script)",
     )
     parser.add_argument(
         "--images-dir",
-        default="data/isic2020",
-        help="Pasta raiz das imagens com subpastas train/ e test/ (padrão: data/isic2020)",
+        default=str(_script_dir / "isic2020"),
+        help="Pasta raiz das imagens com subpastas train/ e test/ (padrão: <data-dir>/isic2020)",
     )
     parser.add_argument(
         "--seed",
