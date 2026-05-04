@@ -48,7 +48,7 @@ def _get_val_transform():
 
 def _get_tta_transform():
     return A.Compose([
-        A.RandomResizedCrop(IMG_SIZE, IMG_SIZE, scale=(0.85, 1.0)),
+        A.RandomResizedCrop(size=(IMG_SIZE, IMG_SIZE), scale=(0.85, 1.0)),
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.5),
         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
