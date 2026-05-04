@@ -16,6 +16,18 @@ output_schema_melanoma = {
             "type": "boolean",
             "description": "true se probabilidade ≥ 0.5",
         },
+        "age_approx": {
+            "type": ["number", "null"],
+            "description": "Idade aproximada utilizada na predição (null se não informada)",
+        },
+        "anatom_site": {
+            "type": ["string", "null"],
+            "description": (
+                "Localização anatômica utilizada na predição (null se não informada). "
+                "Valores possíveis: torso, lower extremity, upper extremity, "
+                "head/neck, palms/soles, oral/genital"
+            ),
+        },
     },
-    "required": ["probabilidade_melanoma", "classificacao", "alerta"],
+    "required": ["probabilidade_melanoma", "classificacao", "alerta", "age_approx", "anatom_site"],
 }
