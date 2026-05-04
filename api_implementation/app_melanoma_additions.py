@@ -33,7 +33,7 @@ except FileNotFoundError:
 @app.route("/predict/melanoma", methods=["POST"])
 def predict_melanoma_endpoint():
     """
-    Predição de melanoma a partir de imagem de lesão cutânea.
+    Predição de melanoma a partir de imagem de lesão cutânea e metadados clínicos.
     ---
     tags:
       - Melanoma
@@ -45,6 +45,18 @@ def predict_melanoma_endpoint():
         type: file
         required: true
         description: "Imagem JPEG/PNG da lesão cutânea"
+      - in: formData
+        name: age_approx
+        type: number
+        required: false
+        description: "Idade aproximada do paciente em anos (ex.: 45)"
+      - in: formData
+        name: anatom_site
+        type: string
+        required: false
+        description: >
+          Localização anatômica da lesão. Valores aceitos:
+          torso, lower extremity, upper extremity, head/neck, palms/soles, oral/genital
       - in: formData
         name: tta_steps
         type: integer
@@ -97,9 +109,26 @@ def predict_melanoma_endpoint():
     except (ValueError, TypeError):
         return jsonify({"error": "Valor inválido para 'tta_steps': deve ser um inteiro entre 1 e 10."}), 400
 
+    age_approx_raw = request.form.get("age_approx")
+    age_approx: float | None = None
+    if age_approx_raw is not None:
+        try:
+            age_approx = float(age_approx_raw)
+            if age_approx < 0 or age_approx > 120:
+                return jsonify({"error": "Valor inválido para 'age_approx': deve ser entre 0 e 120."}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "Valor inválido para 'age_approx': deve ser um número."}), 400
+
+    anatom_site: str | None = request.form.get("anatom_site") or None
+
     try:
         image_bytes = file.read()
-        result = run_predict_melanoma(image_bytes, melanoma_model, tta_steps)
+        result = run_predict_melanoma(
+            image_bytes, melanoma_model,
+            age_approx=age_approx,
+            anatom_site=anatom_site,
+            tta_steps=tta_steps,
+        )
     except Exception as exc:
         logger.exception("Erro ao processar predição de melanoma: %s", exc)
         return jsonify({"error": "Erro interno ao processar a imagem."}), 500
