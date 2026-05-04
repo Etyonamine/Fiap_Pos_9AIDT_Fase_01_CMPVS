@@ -1,1 +1,5 @@
 *.pyc
+outputs/
+data/isic2020/backup
+data/isic2020/Test
+data/isic2020/Train
