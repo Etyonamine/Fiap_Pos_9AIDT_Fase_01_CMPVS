@@ -29,5 +29,5 @@ output_schema_melanoma = {
             ),
         },
     },
-    "required": ["probabilidade_melanoma", "classificacao", "alerta", "age_approx", "anatom_site"],
+    "required": ["probabilidade_melanoma", "classificacao", "alerta"],
 }

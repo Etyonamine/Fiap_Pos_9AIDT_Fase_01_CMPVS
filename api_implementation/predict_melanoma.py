@@ -147,7 +147,8 @@ def predict_melanoma(
             valor de preenchimento padrão (mediana ~45 anos).
         anatom_site: Localização anatômica da lesão — um dos valores de
             :data:`ANATOM_SITE_CATS` (ex.: ``"torso"``, ``"head/neck"``).
-            ``None`` ou valor desconhecido resulta em one-hot todo zero.
+            ``None`` ou valor não reconhecido resultam em vetor one-hot todo
+            zero (nenhuma categoria selecionada).
         tta_steps: Número de passes de TTA (1–10, padrão 5).
 
     Returns:
