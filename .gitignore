@@ -2,6 +2,6 @@
 outputs/
 data/isic2020/backup
 data/isic2020/Test
-#data/isic2020/Train
+data/isic2020/Train
 data/data/isic2020
 data/isic2020/ISIC_2020_Test_JPEG.zip
