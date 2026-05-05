@@ -60,12 +60,23 @@ def _stratified_sample(class_df: pd.DataFrame, n: int, strat_cols: list, seed: i
     """
     Retorna exatamente n linhas de class_df amostrando proporcionalmente
     dentro de cada estrato definido pelas colunas em strat_cols.
-    Grupos com poucos registros recebem pelo menos 1 amostra.
+    Grupos com poucos registros recebem pelo menos 1 amostra, desde que
+    o número de estratos não exceda n (caso contrário, cada estrato recebe
+    exatamente 1 amostra e o excedente é descartado aleatoriamente).
     """
+    groups = list(class_df.groupby(strat_cols, dropna=False))
+    n_strata = len(groups)
+
+    if n_strata >= n:
+        # Mais estratos do que amostras desejadas: 1 por estrato, depois corta
+        sampled_parts = [grp.sample(n=1, random_state=seed) for _, grp in groups]
+        result = pd.concat(sampled_parts).sample(n=n, random_state=seed)
+        return result
+
     frac = n / len(class_df)
     sampled_parts = []
 
-    for _, group in class_df.groupby(strat_cols, dropna=False):
+    for _, group in groups:
         n_g = max(1, round(len(group) * frac))
         sampled_parts.append(group.sample(n=min(n_g, len(group)), random_state=seed))
 
@@ -75,7 +86,7 @@ def _stratified_sample(class_df: pd.DataFrame, n: int, strat_cols: list, seed: i
     if len(result) > n:
         result = result.sample(n=n, random_state=seed)
     elif len(result) < n:
-        remaining = class_df.drop(result.index)
+        remaining = class_df.loc[~class_df.index.isin(result.index)]
         extra_n = min(n - len(result), len(remaining))
         if extra_n > 0:
             result = pd.concat([result, remaining.sample(n=extra_n, random_state=seed)])
@@ -224,7 +235,7 @@ def main():
 
     df_train_selected = sample_balanced(
         df_train, target_col="target", seed=seed,
-        strat_cols=train_strat_cols if train_strat_cols else None,
+        strat_cols=train_strat_cols or None,
     )
 
     # Renomeia original e salva novo CSV
