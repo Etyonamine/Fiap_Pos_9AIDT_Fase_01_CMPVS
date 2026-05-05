@@ -109,7 +109,7 @@ def sample_balanced(
     de cada estrato (ex.: faixa etária e localização anatômica).
     """
     n_total = len(df)
-    n_third = n_total // 4
+    n_third = n_total // 6
 
     class_0 = df[df[target_col] == 0]
     class_1 = df[df[target_col] == 1]
@@ -141,7 +141,7 @@ def sample_balanced(
 def sample_random(df: pd.DataFrame, seed: int) -> pd.DataFrame:
     """Seleciona aleatoriamente 1/3 do dataframe (sem coluna target)."""
     n_total = len(df)
-    n_third = n_total // 4
+    n_third = n_total // 6
     result = df.sample(n=n_third, random_state=seed)
     print(f"  Selecionados: {len(result)} linhas de {n_total} totais (seleção aleatória)")
     return result
