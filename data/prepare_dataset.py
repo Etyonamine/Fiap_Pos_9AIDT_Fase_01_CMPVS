@@ -10,6 +10,10 @@ Passos executados
 2. Para o arquivo de treino: seleciona 1/3 do total balanceando 50 % benign
    (target=0) e 50 % malignant (target=1).  Como a classe maligna é bem
    menor, o tamanho do lote fica limitado a 2 × n_malignant.
+   Adicionalmente, quando as colunas age_approx e anatom_site_general_challenge
+   estiverem presentes, a amostragem dentro de cada classe é estratificada
+   por essas colunas, preservando a distribuição etária e por localização
+   anatômica de cada classe.
 3. Para o arquivo de teste: como não existe coluna target, seleciona
    aleatoriamente 1/3 do total.
 4. Renomeia os CSVs originais acrescentando o sufixo _bkup ao nome.
@@ -52,10 +56,57 @@ def backup_csv(csv_path: Path) -> Path:
     return bkup_path
 
 
-def sample_balanced(df: pd.DataFrame, target_col: str, seed: int) -> pd.DataFrame:
+def _stratified_sample(class_df: pd.DataFrame, n: int, strat_cols: list, seed: int) -> pd.DataFrame:
+    """
+    Retorna exatamente n linhas de class_df amostrando proporcionalmente
+    dentro de cada estrato definido pelas colunas em strat_cols.
+    Grupos com poucos registros recebem pelo menos 1 amostra, desde que
+    o número de estratos não exceda n (caso contrário, cada estrato recebe
+    exatamente 1 amostra e o excedente é descartado aleatoriamente).
+    """
+    groups = list(class_df.groupby(strat_cols, dropna=False))
+    n_strata = len(groups)
+
+    if n_strata >= n:
+        # Mais estratos do que amostras desejadas: 1 por estrato, depois corta
+        sampled_parts = [grp.sample(n=1, random_state=seed) for _, grp in groups]
+        result = pd.concat(sampled_parts).sample(n=n, random_state=seed)
+        return result
+
+    frac = n / len(class_df)
+    sampled_parts = []
+
+    for _, group in groups:
+        n_g = max(1, round(len(group) * frac))
+        sampled_parts.append(group.sample(n=min(n_g, len(group)), random_state=seed))
+
+    result = pd.concat(sampled_parts)
+
+    # Ajuste fino para garantir exatamente n linhas
+    if len(result) > n:
+        result = result.sample(n=n, random_state=seed)
+    elif len(result) < n:
+        remaining = class_df.loc[~class_df.index.isin(result.index)]
+        extra_n = min(n - len(result), len(remaining))
+        if extra_n > 0:
+            result = pd.concat([result, remaining.sample(n=extra_n, random_state=seed)])
+
+    return result
+
+
+def sample_balanced(
+    df: pd.DataFrame,
+    target_col: str,
+    seed: int,
+    strat_cols: list | None = None,
+) -> pd.DataFrame:
     """
     Seleciona 1/3 do total do dataframe com 50 % de cada classe (target 0/1).
     O tamanho real é limitado pela classe minoritária.
+
+    Se strat_cols for fornecido, a amostragem dentro de cada classe é
+    estratificada por essas colunas, preservando a distribuição proporcional
+    de cada estrato (ex.: faixa etária e localização anatômica).
     """
     n_total = len(df)
     n_third = n_total // 3
@@ -69,8 +120,12 @@ def sample_balanced(df: pd.DataFrame, target_col: str, seed: int) -> pd.DataFram
     if n_per_class == 0:
         raise ValueError("Não há amostras suficientes para balancear as classes.")
 
-    sampled_0 = class_0.sample(n=n_per_class, random_state=seed)
-    sampled_1 = class_1.sample(n=n_per_class, random_state=seed)
+    if strat_cols:
+        sampled_0 = _stratified_sample(class_0, n_per_class, strat_cols, seed)
+        sampled_1 = _stratified_sample(class_1, n_per_class, strat_cols, seed)
+    else:
+        sampled_0 = class_0.sample(n=n_per_class, random_state=seed)
+        sampled_1 = class_1.sample(n=n_per_class, random_state=seed)
 
     result = pd.concat([sampled_0, sampled_1]).sample(frac=1, random_state=seed)
     print(
@@ -78,6 +133,8 @@ def sample_balanced(df: pd.DataFrame, target_col: str, seed: int) -> pd.DataFram
         f"(benigno={len(sampled_0)}, maligno={len(sampled_1)}) "
         f"de {n_total} totais"
     )
+    if strat_cols:
+        print(f"  Estratificação adicional por: {strat_cols}")
     return result
 
 
@@ -170,7 +227,16 @@ def main():
     train_img_col = "image_name" if "image_name" in df_train.columns else "image"
     print(f"  Coluna de imagem: '{train_img_col}'")
 
-    df_train_selected = sample_balanced(df_train, target_col="target", seed=seed)
+    # Colunas extras para estratificação (usadas quando presentes no CSV)
+    _candidate_strat_cols = ["age_approx", "anatom_site_general_challenge"]
+    train_strat_cols = [c for c in _candidate_strat_cols if c in df_train.columns]
+    if train_strat_cols:
+        print(f"  Colunas de estratificação encontradas: {train_strat_cols}")
+
+    df_train_selected = sample_balanced(
+        df_train, target_col="target", seed=seed,
+        strat_cols=train_strat_cols or None,
+    )
 
     # Renomeia original e salva novo CSV
     bkup_train = backup_csv(train_csv)
