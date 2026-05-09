@@ -95,8 +95,6 @@ def select_balanced_with_files(
         image_paths : lista de Path dos arquivos encontrados (mesma ordem)
     """
     n_per_class = n_total // 2
-    rng = pd.Series(dtype=object)  # só para satisfazer o linter
-
     selected_rows: list[pd.Series] = []
     found_paths: list[Path] = []
 
@@ -116,11 +114,9 @@ def select_balanced_with_files(
             found_paths.append(img_path)
             collected += 1
 
-        available = len(class_df) - discarded
         print(
             f"  target={class_val}: {collected}/{n_per_class} selecionados "
-            f"| {discarded} descartados (arquivo não encontrado) "
-            f"| {available} disponíveis no total"
+            f"| {discarded} descartados (arquivo não encontrado)"
         )
         if collected < n_per_class:
             print(
