@@ -1,22 +1,25 @@
 """
 select_train_balanced.py
 ========================
-Lê ISIC_2020_Training_GroundTruth.csv, seleciona de forma aleatória e
-equilibrada 15.000 imagens (7.500 por classe de target), copia os arquivos
-encontrados na pasta train/ para train_selecionado/ e gera um novo CSV
-com os registros selecionados.
+Lê ISIC_2020_Training_GroundTruth.csv, filtra apenas pacientes do sexo
+feminino (sex == "female"), seleciona de forma aleatória e equilibrada
+15.000 imagens (7.500 por classe de target), copia os arquivos encontrados
+na pasta train/ para train_selecionado/ e gera um novo CSV com os registros
+selecionados.
 
 Passos executados
 -----------------
 1. Lê ISIC_2020_Training_GroundTruth.csv.
-2. Seleciona 15.000 imagens balanceadas (7.500 com target=0 e 7.500 com
-   target=1).
-3. Para cada imagem selecionada, busca o arquivo na pasta train/ (suporta
+2. Filtra apenas os registros com sex == "female" (quando a coluna 'sex'
+   estiver presente no CSV).
+3. Seleciona 15.000 imagens balanceadas (7.500 com target=0 e 7.500 com
+   target=1) a partir do subconjunto feminino.
+4. Para cada imagem selecionada, busca o arquivo na pasta train/ (suporta
    .jpg, .jpeg, .png, .tif, .tiff, .bmp). Se não encontrar, descarta e
    substitui por outra imagem da mesma classe.
-4. Cria a pasta train_selecionado/ (se não existir) e copia as imagens.
-5. Renomeia o CSV original acrescentando _bkup ao nome.
-6. Grava um novo CSV com o nome original contendo apenas os registros
+5. Cria a pasta train_selecionado/ (se não existir) e copia as imagens.
+6. Renomeia o CSV original acrescentando _bkup ao nome.
+7. Grava um novo CSV com o nome original contendo apenas os registros
    selecionados.
 
 Uso
@@ -45,6 +48,7 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+SEX_FILTER = "female"
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +205,31 @@ def main() -> None:
     print(f"  Distribuição de target:\n{df['target'].value_counts().to_string()}")
 
     # -----------------------------------------------------------------------
-    # 2. Valida pasta de imagens
+    # 2. Filtra apenas pacientes do sexo feminino
+    # -----------------------------------------------------------------------
+    if "sex" in df.columns:
+        df_female = df[df["sex"] == SEX_FILTER].copy()
+        print(f"\n{'='*60}")
+        print(f"Filtrando pacientes do sexo feminino (sex == '{SEX_FILTER}')...")
+        print("=" * 60)
+        print(f"  Registros antes do filtro : {len(df):,}")
+        print(f"  Registros após o filtro   : {len(df_female):,}")
+        print(f"  Distribuição de target (feminino):\n{df_female['target'].value_counts().to_string()}")
+        if df_female.empty:
+            raise ValueError(
+                f"Nenhum registro encontrado com sex == '{SEX_FILTER}'. "
+                "Verifique o conteúdo da coluna 'sex' no CSV."
+            )
+        df = df_female
+    else:
+        raise KeyError(
+            "Coluna 'sex' não encontrada no CSV. "
+            f"O filtro por sexo (sex == '{SEX_FILTER}') não pode ser aplicado. "
+            f"Colunas disponíveis: {df.columns.tolist()}"
+        )
+
+    # -----------------------------------------------------------------------
+    # 3. Valida pasta de imagens
     # -----------------------------------------------------------------------
     if not train_dir.exists():
         raise FileNotFoundError(
@@ -210,16 +238,16 @@ def main() -> None:
         )
 
     # -----------------------------------------------------------------------
-    # 3. Cria pasta de saída
+    # 4. Cria pasta de saída
     # -----------------------------------------------------------------------
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"\n  Pasta de saída: {output_dir}")
 
     # -----------------------------------------------------------------------
-    # 4. Seleção balanceada verificando existência dos arquivos
+    # 5. Seleção balanceada verificando existência dos arquivos
     # -----------------------------------------------------------------------
     print(f"\n{'='*60}")
-    print(f"Selecionando {n_total} imagens balanceadas...")
+    print(f"Selecionando {n_total} imagens balanceadas (somente feminino)...")
     print("=" * 60)
 
     selected_df, image_paths = select_balanced_with_files(
@@ -234,7 +262,7 @@ def main() -> None:
     print(f"\n  Total selecionado: {len(selected_df)} imagens")
 
     # -----------------------------------------------------------------------
-    # 5. Copia imagens para train_selecionado/
+    # 6. Copia imagens para train_selecionado/
     # -----------------------------------------------------------------------
     print(f"\n{'='*60}")
     print(f"Copiando imagens para {output_dir.name}/...")
@@ -247,7 +275,7 @@ def main() -> None:
             print(f"  Copiadas: {i}/{len(image_paths)}")
 
     # -----------------------------------------------------------------------
-    # 6. Renomeia CSV original e grava novo CSV
+    # 7. Renomeia CSV original e grava novo CSV
     # -----------------------------------------------------------------------
     print(f"\n{'='*60}")
     print("Atualizando CSV...")
